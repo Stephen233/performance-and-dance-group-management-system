@@ -1,0 +1,315 @@
+{% extends "base.html" %}
+
+{% block title %}Performance Records{% endblock %}
+
+{% block additional_styles %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+    .filters {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 20px;
+        flex-wrap: wrap;
+    }
+
+    .filter-group {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .score-filter {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .score-filter select {
+        flex: 1;
+    }
+
+    .performance-table {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .performance-table th,
+    .performance-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .star-rating {
+        color: #ffd700;
+        font-size: 18px;
+    }
+
+    .star-rating .fas,
+    .star-rating .far {
+        margin-right: 2px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .info-icon {
+        color: #007bff;
+        cursor: help;
+        position: relative;
+        display: inline-block;
+        margin-left: 5px;
+    }
+
+    .tooltip-content {
+        visibility: hidden;
+        width: 200px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+        pointer-events: none;
+    }
+
+    .info-icon:hover .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_items %}
+<a href="{{ url_for('coach.personal_information') }}">My Account</a>
+<a href="{{ url_for('coach.users_information') }}">Users Information</a>
+<a href="{{ url_for('coach.attendance_record') }}">Attendance Record</a>
+<a href="{{ url_for('coach.injury_record') }}">Injury Record</a>
+<a href="{{ url_for('coach.performance_record') }}" class="active">Performance Record</a>
+<a href="{{ url_for('coach.training_record') }}">Training Records</a>
+{% endblock %}
+
+{% block content %}
+    <div class="filters">
+        <div class="filter-row">
+            <div class="filter-group">
+                <label>Artist</label>
+                <select id="userFilter" style="width: 100%;">
+                    <option value="">All Artists</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Date Range</label>
+                <input type="text" id="dateRange" class="form-control">
+            </div>
+            <div class="filter-group">
+                <label>Score Range</label>
+                <div class="score-filter">
+                    <select id="minScore" class="form-control">
+                        <option value="">Min Score</option>
+                        <option value="1">1 Star</option>
+                        <option value="2">2 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="5">5 Stars</option>
+                    </select>
+                    <span>to</span>
+                    <select id="maxScore" class="form-control">
+                        <option value="">Max Score</option>
+                        <option value="1">1 Star</option>
+                        <option value="2">2 Stars</option>
+                        <option value="3">3 Stars</option>
+                        <option value="4">4 Stars</option>
+                        <option value="5">5 Stars</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <table class="performance-table">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Artist</th>
+                <th>Performance Name</th>
+                <th>Location</th>
+                <th>Score</th>
+                <th>Feedback</th>
+            </tr>
+        </thead>
+        <tbody id="performanceTableBody">
+        </tbody>
+    </table>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+<script>
+    let isInitializing = true;
+    let lastRequest = null;
+
+    // initialize
+    $(document).ready(function() {
+        initializeSelects();
+        initializeDateRangePicker();
+        loadPerformances();
+        isInitializing = false;
+    });
+
+    // Select2 init
+    function initializeSelects() {
+        $('#userFilter').select2({
+            placeholder: 'All Artists',
+            allowClear: true
+        }).on('change', function(e, data) {
+            if (!isInitializing && (!data || !data.programmatic)) {
+                loadPerformances();
+            }
+        });
+    }
+
+    function initializeDateRangePicker() {
+        $('#dateRange').daterangepicker({
+            startDate: moment().subtract(29, 'days'),
+            endDate: moment(),
+            ranges: {
+                'Today': [moment(), moment()],
+                'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                'Last 14 Days': [moment().subtract(13, 'days'), moment()],
+                'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+                'Last One Year': [moment().subtract(364, 'days'), moment()]
+            }
+        }, function(start, end) {
+            if (!isInitializing) {
+                loadPerformances();
+            }
+        });
+
+        $('#minScore, #maxScore').on('change', function() {
+            if (!isInitializing) {
+                loadPerformances();
+            }
+        });
+    }
+
+    async function loadPerformances() {
+        if (lastRequest) {
+            lastRequest.abort();
+        }
+
+        try {
+            const params = new URLSearchParams({
+                user_id: $('#userFilter').val() || '',
+                start_date: $('#dateRange').data('daterangepicker').startDate.format('YYYY-MM-DD'),
+                end_date: $('#dateRange').data('daterangepicker').endDate.format('YYYY-MM-DD'),
+                min_score: $('#minScore').val() || '',
+                max_score: $('#maxScore').val() || ''
+            });
+
+            const controller = new AbortController();
+            lastRequest = controller;
+
+            const response = await fetch(`/coach/api/performance?${params}`, {
+                signal: controller.signal
+            });
+            
+            const data = await response.json();
+            if (response.ok && data.records && Array.isArray(data.records)) {
+                updateUserOptions(data.users);
+                displayPerformanceRecords(data.records);
+            } else {
+                console.warn('Received invalid data format or error:', data);
+            }
+        } catch (error) {
+            if (error.name !== 'AbortError') {
+                console.error('Error loading performances:', error);
+            }
+        } finally {
+            lastRequest = null;
+        }
+    }
+
+    function updateUserOptions(users) {
+        const userFilter = $('#userFilter');
+        const currentValue = userFilter.val();
+        
+        if ($('#userFilter option').length <= 1) {
+            users.forEach(user => {
+                userFilter.append(new Option(user.name, user.user_id));
+            });
+            
+            if (currentValue) {
+                userFilter.val(currentValue).trigger('change', { programmatic: true });
+            }
+        }
+    }
+
+    function displayPerformanceRecords(records) {
+        const tbody = $('#performanceTableBody');
+        tbody.empty();
+
+        if (!records.length) {
+            tbody.append('<tr><td colspan="6" class="text-center">No records found</td></tr>');
+            return;
+        }
+
+        records.forEach(record => {
+            const feedbackDisplay = record.feedback ? 
+                `<span class="info-icon">
+                    <i class="fas fa-info-circle"></i>
+                    <span class="tooltip-content">${record.feedback}</span>
+                </span>` : 
+                '-';
+                
+            tbody.append(`
+                <tr>
+                    <td>${record.performance_date}</td>
+                    <td>${record.user_name}</td>
+                    <td>${record.performance_name}</td>
+                    <td>${record.location}</td>
+                    <td>${getStarRating(record.score)}</td>
+                    <td>${feedbackDisplay}</td>
+                </tr>
+            `);
+        });
+    }
+
+    function getStarRating(score) {
+        let stars = '';
+        for (let i = 1; i <= 5; i++) {
+            stars += `<i class="${i <= score ? 'fas' : 'far'} fa-star"></i>`;
+        }
+        return `<div class="star-rating">${stars}</div>`;
+    }
+</script>
+{% endblock %}

@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block title %}Artist Dashboard{% endblock %}
+
+{% block top_image %}
+<div class="breadcrumb-area">
+    <img src="{{ url_for('static', filename='img/dancer.jpeg') }}" alt="dancer">
+</div>
+{% endblock %}
+
+{% block welcome_message %}
+<div class="welcome-text">Welcome, Artist {{ user }}!</div>
+{% endblock %}
+
+{% block sidebar_items %}
+<a href="{{ url_for('artist.personal_information') }}">My Account</a>
+<a href="{{ url_for('common_attendance.attendance_page', role='artist') }}">Attendance Record</a>
+<a href="{{ url_for('artist.injury_record') }}">Injury Record</a>
+<a href="{{ url_for('artist.performance_record') }}">Performance Record</a>
+<a href="{{ url_for('artist.training_record') }}">Training Records</a>
+{% endblock %}
+
+{% block content %}
+<div class="dashboard-content">
+    <div class="notice-container" style="max-width: 1300px; margin: 20px auto; padding: 30px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <h2 style="color: #333; margin-bottom: 20px; font-size: 24px;">Account Information Verification Notice</h2>
+        
+        <div class="notice-content" style="color: #444; line-height: 1.6; font-size: 16px;">
+            <p style="margin-bottom: 15px;">Dear Valued User,</p>
+            
+            <p style="margin-bottom: 15px;">Greetings!</p>
+            
+            <p style="margin-bottom: 20px;">To ensure we continue providing you with the best possible service experience, we kindly invite you to review and update your personal account information. Please take a moment to log into your account, carefully verify the accuracy of all your personal details, and complete any missing information at your earliest convenience.</p>
+            
+            <p style="margin-bottom: 20px;">If you encounter any issues during the update process or need assistance, please don't hesitate to contact me at:<br>
+            <a href="mailto:luhanhao1999@gmail.com" style="color: #007bff; text-decoration: none;">luhanhao1999@gmail.com</a></p>
+            
+            <p style="margin-bottom: 15px;">Thank you for your cooperation and continued support.</p>
+            
+            <p style="margin-bottom: 15px;">Best regards,</p>
+            
+            <p style="margin-bottom: 0;">
+                <strong>Stephen Lu hanhao</strong><br>
+                Site Administrator
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}

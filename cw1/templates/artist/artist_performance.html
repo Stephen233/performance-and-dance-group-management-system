@@ -1,0 +1,228 @@
+{% extends "base.html" %}
+
+{% block title %}My Performance Records{% endblock %}
+
+{% block additional_styles %}
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<style>
+    .filters {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+
+    .filter-group {
+        flex: 1;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .performance-table {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .performance-table th,
+    .performance-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .performance-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .performance-table tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    .star-rating {
+        color: #ffd700;
+        font-size: 18px;
+    }
+
+    .star-rating .fas,
+    .star-rating .far {
+        margin-right: 2px;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-size: 14px;
+    }
+
+    .info-icon {
+        color: #007bff;
+        cursor: help;
+        position: relative;
+        margin-left: 5px;
+    }
+
+    .tooltip-content {
+        visibility: hidden;
+        width: 200px;
+        background-color: #333;
+        color: #fff;
+        text-align: center;
+        border-radius: 6px;
+        padding: 10px;
+        position: absolute;
+        z-index: 1;
+        bottom: 125%;
+        left: 50%;
+        margin-left: -100px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+
+    .info-icon:hover .tooltip-content {
+        visibility: visible;
+        opacity: 1;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_items %}
+<a href="{{ url_for('artist.personal_information') }}">My Account</a>
+<a href="{{ url_for('common_attendance.attendance_page', role='artist') }}">Attendance Record</a>
+<a href="{{ url_for('artist.injury_record') }}">Injury Record</a>
+<a href="{{ url_for('artist.performance_record') }}" class="active">Performance Record</a>
+<a href="{{ url_for('artist.training_record') }}">Training Records</a>
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+    <div class="filter-row">
+        <div class="filter-group">
+            <label>Date Range</label>
+            <input type="text" id="dateRange" class="form-control">
+        </div>
+    </div>
+</div>
+
+<table class="performance-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Performance Name</th>
+            <th>Location</th>
+            <th>Score</th>
+            <th>Feedback</th>
+        </tr>
+    </thead>
+    <tbody id="performanceTableBody">
+        <!-- JavaScript will populate this -->
+    </tbody>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/js/all.min.js"></script>
+
+<script>
+$(document).ready(function() {
+    initializeDateRangePicker();
+    loadPerformances();
+});
+
+function initializeDateRangePicker() {
+    $('#dateRange').daterangepicker({
+        startDate: moment().subtract(29, 'days'),
+        endDate: moment(),
+        ranges: {
+            'Today': [moment(), moment()],
+            'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+            'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+            'Last 14 Days': [moment().subtract(13, 'days'), moment()],
+            'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+            'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+            'Last One Year': [moment().subtract(364, 'days'), moment()]
+        }
+    }, function(start, end) {
+        loadPerformances();
+    });
+}
+
+async function loadPerformances() {
+    try {
+        const response = await fetch('/api/artist/performance?' + new URLSearchParams({
+            start_date: $('#dateRange').data('daterangepicker').startDate.format('YYYY-MM-DD'),
+            end_date: $('#dateRange').data('daterangepicker').endDate.format('YYYY-MM-DD')
+        }));
+        
+        const data = await response.json();
+        if (response.ok) {
+            displayPerformanceRecords(data.records);
+        } else {
+            throw new Error(data.error || 'Failed to load performance records');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Failed to load performance records');
+    }
+}
+
+function displayPerformanceRecords(records) {
+    const tbody = $('#performanceTableBody');
+    tbody.empty();
+
+    if (!records.length) {
+        tbody.append('<tr><td colspan="5" class="text-center">No records found</td></tr>');
+        return;
+    }
+
+    records.forEach(record => {
+        const feedbackDisplay = record.feedback ? 
+            `<span class="info-icon">
+                <i class="fas fa-info-circle"></i>
+                <span class="tooltip-content">${record.feedback}</span>
+            </span>` : 
+            '-';
+            
+        tbody.append(`
+            <tr>
+                <td>${record.performance_date}</td>
+                <td>${record.performance_name}</td>
+                <td>${record.location}</td>
+                <td>${getStarRating(record.score)}</td>
+                <td>${feedbackDisplay}</td>
+            </tr>
+        `);
+    });
+}
+
+function getStarRating(score) {
+    let stars = '';
+    for (let i = 1; i <= 5; i++) {
+        stars += `<i class="${i <= score ? 'fas' : 'far'} fa-star"></i>`;
+    }
+    return `<div class="star-rating">${stars}</div>`;
+}
+</script>
+{% endblock %}

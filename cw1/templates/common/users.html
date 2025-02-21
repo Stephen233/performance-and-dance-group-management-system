@@ -1,0 +1,184 @@
+{% extends "base.html" %}
+
+{% block title %}Users Information{% endblock %}
+
+{% block additional_styles %}
+<style>
+    .search-bar {
+        margin-bottom: 20px;
+        display: flex;
+        gap: 10px;
+    }
+
+    .search-bar input {
+        flex: 1;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .users-table {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        border-collapse: collapse;
+    }
+
+    .users-table th,
+    .users-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .users-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_items %}
+<a href="{{ url_for(role + '.personal_information') }}">My Account</a>
+<a href="{{ url_for(role + '.users_information') }}" class="active">Users Information</a>
+<a href="{{ url_for(role + '.attendance_record') }}">Attendance Record</a>
+<a href="{{ url_for(role + '.injury_record') }}">Injury Record</a>
+<a href="{{ url_for('director_performance.performance_page') }}">Performance Record</a>
+<a href="{{ url_for(role + '.training_record') }}">Training Records</a>
+{% endblock %}
+
+{% block content %}
+<div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search users by name...">
+</div>
+
+<table class="users-table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th onclick="toggleRoleFilter()" style="cursor: pointer">
+                Role 
+                <span id="roleFilterIcon">👥</span>
+            </th>
+            <th onclick="toggleDateSort()" style="cursor: pointer">
+                Birth Date 
+                <span id="dateSortIcon">📅</span>
+            </th>
+            <th>Guardian</th>
+        </tr>
+    </thead>
+    <tbody id="usersTableBody">
+        <!-- User data will be dynamically populated through JavaScript -->
+    </tbody>
+</table>
+
+<script>
+    let currentRoleFilter = 'all'; 
+    let currentDateSort = 'none';  
+    let userData = [];  
+
+    // Load users function
+    async function loadUsers(search = '') {
+        try {
+            console.log('Fetching users with search:', search); // Debug log
+            const response = await fetch(`/director/api/users?search=${encodeURIComponent(search)}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            console.log('Received data:', data); // Debug log
+            userData = data.users;
+            displayUsers();
+        } catch (error) {
+            console.error('Error loading users:', error);
+            alert('Failed to load user data. Please try again later.');
+        }
+    }
+
+    // Display users function
+    function displayUsers() {
+        let filteredUsers = [...userData];
+        
+        if (currentRoleFilter !== 'all') {
+            filteredUsers = filteredUsers.filter(user => user.role === currentRoleFilter);
+        }
+        
+        if (currentDateSort !== 'none') {
+            filteredUsers.sort((a, b) => {
+                const dateA = new Date(a.birth_date);
+                const dateB = new Date(b.birth_date);
+                return currentDateSort === 'asc' ? dateA - dateB : dateB - dateA;
+            });
+        }
+        
+        const tbody = document.getElementById('usersTableBody');
+        tbody.innerHTML = '';
+        
+        filteredUsers.forEach(user => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${user.user_id}</td>
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.role}</td>
+                <td>${user.birth_date}</td>
+                <td>${user.guardian || '-'}</td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    // Toggle role filter function
+    function toggleRoleFilter() {
+        const roles = ['all', 'artist', 'coach', 'director'];
+        const currentIndex = roles.indexOf(currentRoleFilter);
+        currentRoleFilter = roles[(currentIndex + 1) % roles.length];
+        
+        const icon = document.getElementById('roleFilterIcon');
+        icon.textContent = currentRoleFilter === 'all' ? '👥' : '🔍';
+        
+        displayUsers();
+    }
+
+    // Toggle date sort function
+    function toggleDateSort() {
+        const sorts = ['none', 'asc', 'desc'];
+        const currentIndex = sorts.indexOf(currentDateSort);
+        currentDateSort = sorts[(currentIndex + 1) % sorts.length];
+        
+        const icon = document.getElementById('dateSortIcon');
+        icon.textContent = {
+            'none': '📅',
+            'asc': '⬆️',
+            'desc': '⬇️'
+        }[currentDateSort];
+        
+        displayUsers();
+    }
+
+    // Search functionality
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', debounce(() => {
+        loadUsers(searchInput.value);
+    }, 300));
+
+    // Debounce function
+    function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    // Initial load
+    loadUsers();
+</script>
+{% endblock %}

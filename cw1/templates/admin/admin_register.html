@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Registration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+            margin: 0;
+        }
+
+        .container {
+            background: white;
+            padding: 25px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 5px;
+            text-align: center;
+            width: 400px;
+            max-width: 90%;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            margin-bottom: 15px;
+        }
+
+        .form-group {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            width: 30%;
+            text-align: left;
+            font-weight: bold;
+        }
+
+        .form-group input, 
+        .form-group select {
+            width: 68%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+        }
+
+        .date-select-group {
+            display: flex;
+            width: 68%;
+            gap: 5px;
+            align-items: center;
+        }
+
+        .date-select-group select {
+            padding: 8px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+            width: auto;
+        }
+
+        #birth_year { width: 80px; }
+        #birth_month { width: 60px; }
+        #birth_day { width: 60px; }
+
+        .error {
+            color: red;
+            font-size: 14px;
+            margin-top: 5px;
+            display: none;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        button {
+            width: 100%;
+            padding: 12px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+
+        .btn-submit {
+            background-color: #000000;
+            color: white;
+        }
+
+        .btn-submit:hover {
+            background-color: #414141;
+        }
+
+        .btn-back {
+            background-color: white;
+            color: black;
+            border: 1px solid black;
+            margin-top: 10px;
+        }
+
+        .btn-back:hover {
+            background-color: #f0f0f0;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>User Registration</h2>
+        <form method="POST" onsubmit="return validateForm()">
+            <div class="form-group">
+                <label for="name">Name:</label>
+                <input type="text" id="name" name="name" required>
+            </div>
+
+            <div class="form-group">
+                <label for="birth_date">Date of Birth:</label>
+                <div class="date-select-group">
+                    <select id="birth_year" name="birth_year" required onchange="updateDays()"></select>
+                    <select id="birth_month" name="birth_month" required onchange="updateDays()"></select>
+                    <select id="birth_day" name="birth_day" required></select>
+                </div>
+                <input type="hidden" id="birth_date" name="birth_date">
+            </div>
+            
+            <div id="guardian_field" class="form-group hidden">
+                <label for="guardian">guardian:</label>
+                <input type="text" id="guardian" name="guardian">
+            </div>
+
+            <div id="error_message" class="error"></div>
+
+            <div class="form-group">
+                <label for="email">E-mail:</label>
+                <input type="email" name="email" required>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password:</label>
+                <input type="password" name="password" required>
+            </div>
+
+            <div class="form-group">
+                <label for="role">Role:</label>
+                <select name="role" required>
+                    <option value="artist">Artist</option>
+                    <option value="coach">Coach</option>
+                    <option value="director">Director</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn-submit" id="register_button">Register</button>
+        </form>
+
+        <button class="btn-back" onclick="window.location.href='/admin/dashboard'">Back to Dashboard</button>
+    </div>
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const yearSelect = document.getElementById("birth_year");
+            const monthSelect = document.getElementById("birth_month");
+            const daySelect = document.getElementById("birth_day");
+            
+            const currentYear = new Date().getFullYear();
+            const startYear = currentYear - 70;
+            
+            for (let year = currentYear; year >= startYear; year--) {
+                const option = new Option(year, year);
+                yearSelect.add(option);
+            }
+
+            for (let month = 1; month <= 12; month++) {
+                const monthText = month < 10 ? '0' + month : month;
+                const option = new Option(monthText, month);
+                monthSelect.add(option);
+            }
+
+            yearSelect.value = currentYear - 20;
+            monthSelect.value = 1;
+            
+            updateDays();
+        });
+
+
+        function updateDays() {
+            const yearSelect = document.getElementById("birth_year");
+            const monthSelect = document.getElementById("birth_month");
+            const daySelect = document.getElementById("birth_day");
+            
+            const year = parseInt(yearSelect.value);
+            const month = parseInt(monthSelect.value);
+            
+            const daysInMonth = new Date(year, month, 0).getDate();
+            
+            const currentDay = daySelect.value;
+            
+            daySelect.innerHTML = "";
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayText = day < 10 ? '0' + day : day;
+                const option = new Option(dayText, day);
+                daySelect.add(option);
+            }
+            
+            if (currentDay && currentDay <= daysInMonth) {
+                daySelect.value = currentDay;
+            }
+            
+            updateHiddenDate();
+        }
+
+        function updateHiddenDate() {
+            const year = document.getElementById("birth_year").value;
+            const month = document.getElementById("birth_month").value.toString().padStart(2, '0');
+            const day = document.getElementById("birth_day").value.toString().padStart(2, '0');
+            
+            document.getElementById("birth_date").value = `${year}-${month}-${day}`;
+            validateAge();
+        }
+
+        function validateAge() {
+            const birthDate = document.getElementById("birth_date").value;
+            const guardianField = document.getElementById("guardian_field");
+            const guardianInput = document.getElementById("guardian");
+            const errorMessage = document.getElementById("error_message");
+            const registerButton = document.getElementById("register_button");
+
+            if (!birthDate) {
+                guardianField.classList.add("hidden");
+                errorMessage.style.display = "none";
+                return;
+            }
+
+            const birthYear = new Date(birthDate).getFullYear();
+            const currentYear = new Date().getFullYear();
+            const age = currentYear - birthYear;
+
+            if (age < 7 || age > 70) {
+                errorMessage.textContent = "Only users aged 7-70 are allowed to register";
+                errorMessage.style.display = "block";
+                guardianField.classList.add("hidden");
+                registerButton.disabled = true;
+            } else if (age >= 7 && age <= 12) {
+                guardianField.classList.remove("hidden");
+                guardianInput.required = true;
+                errorMessage.style.display = "none";
+                registerButton.disabled = false;
+            } else {
+                guardianField.classList.add("hidden");
+                guardianInput.required = false;
+                guardianInput.value = '';
+                errorMessage.style.display = "none";
+                registerButton.disabled = false;
+            }
+        }
+
+        function validateForm() {
+            const birthDate = document.getElementById("birth_date").value;
+            const guardianInput = document.getElementById("guardian");
+            const errorMessage = document.getElementById("error_message");
+            
+            if (!birthDate) {
+                alert("Please select your date of birth!");
+                return false;
+            }
+
+            const birthYear = new Date(birthDate).getFullYear();
+            const currentYear = new Date().getFullYear();
+            const age = currentYear - birthYear;
+
+            if (age < 7 || age > 70) {
+                alert("Age must be between 7-70 years old!");
+                return false;
+            }
+
+            if (age >= 7 && age <= 12) {
+                if (!guardianInput.value || guardianInput.value.trim() === "") {
+                    alert("Users aged 7-12 must fill in guardian Name！");
+                    return false;
+                }
+            }
+
+            if (errorMessage.style.display !== "none" && errorMessage.textContent !== "") {
+                return false;
+            }
+
+            return true;
+        }
+    </script>
+
+    <!-- Flash 消息处理 -->
+    {% if flashes %}
+        <script>
+            window.onload = function() {
+                var messages = JSON.parse('{{ flashes | tojson | safe }}');
+                messages.forEach(function(item) {
+                    alert(item[1]);
+                });
+            };
+        </script>
+    {% endif %}
+
+</body>
+</html>

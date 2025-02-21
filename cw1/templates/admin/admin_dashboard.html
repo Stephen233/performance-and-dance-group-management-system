@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <!-- Include React and other dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #333;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+        }
+
+        .sidebar .welcome {
+            font-size: 18px;
+            padding: 15px;
+            width: 100%;
+            text-align: left;
+            background-color: #444;
+            margin-bottom: 20px;
+            text-decoration: none;
+            border-bottom: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            color: white;
+            padding: 15px 25px;
+            border-bottom: 1px solid #444;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar a:hover {
+            background-color: #575757;
+        }
+
+        .sidebar a.active {
+            background-color: #4a4a4a;
+            border-left: 4px solid #007bff;
+        }
+
+        .main-content {
+            flex: 1;
+            background-color: #f4f4f4;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        .breadcrumb-area {
+            width: 100%;
+            height: 300px;
+            background-color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-bottom: 1px solid #e0e0e0;
+            overflow: hidden;
+        }
+
+        .breadcrumb-area img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .content-container {
+            flex: 1;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .welcome-text {
+            font-size: 32px;
+            color: #333;
+            margin-bottom: 30px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 200px;
+            }
+            .welcome-text {
+                font-size: 24px;
+            }
+            .breadcrumb-area {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <a href="/admin/dashboard" class="welcome">{{ user }}</a>
+        <a href="/admin/register">Register New User</a>
+        <a href="/admin/users">Users Information</a>
+        <a href="/admin/attendance">Attendance Record</a>
+        <a href="/admin/injury">Injury Record</a>
+        <a href="/admin/performance">Performance Record</a>
+        <a href="/admin/training">Training Records</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="main-content">
+        <!-- Breadcrumb Image Area -->
+        <div class="breadcrumb-area">
+            <img src="{{ url_for('static', filename='img/dancer.jpeg') }}" alt="dancer">
+        </div>
+        
+        <!-- Content Container -->
+        <div class="content-container">
+            <div class="welcome-text">Welcome, {{ user }}!</div>
+            <div id="dashboard-root"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        // DashboardStats component
+        const DashboardStats = () => {
+            const [stats, setStats] = React.useState({
+                totalUsers: 0,
+                attendanceRate: 0,
+                activeInjuries: 0,
+                performanceScore: 0
+            });
+            const [activities, setActivities] = React.useState([]);
+            const [loading, setLoading] = React.useState(true);
+            const [error, setError] = React.useState(null);
+
+            const fetchDashboardData = async () => {
+                try {
+                    const response = await fetch('/admin/dashboard/stats');  // 修改这里的路径
+                    if (!response.ok) {
+                        throw new Error('Failed to fetch dashboard data');
+                    }
+                    const data = await response.json();
+                    setStats(data.stats);
+                    setActivities(data.recentActivities);
+                    setError(null);
+                } catch (err) {
+                    setError(err.message);
+                    console.error('Error fetching dashboard data:', err);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            React.useEffect(() => {
+                fetchDashboardData();
+                // Refresh data every minute
+                const interval = setInterval(fetchDashboardData, 60000);
+                return () => clearInterval(interval);
+            }, []);
+
+            const getActivityColor = (type) => {
+                const colors = {
+                    register: 'bg-blue-500',
+                    injury: 'bg-yellow-500',
+                    training: 'bg-green-500',
+                    performance: 'bg-purple-500'
+                };
+                return colors[type] || 'bg-gray-500';
+            };
+
+            if (loading) {
+                return React.createElement('div', { className: 'text-center p-4' }, 'Loading dashboard data...');
+            }
+
+            if (error) {
+                return React.createElement('div', { className: 'text-center text-red-500 p-4' }, error);
+            }
+
+            return React.createElement('div', { className: 'space-y-6' },
+                // Stats Grid
+                React.createElement('div', { className: 'grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4' },
+                    React.createElement('div', { className: 'bg-white p-4 rounded-lg shadow' },
+                        React.createElement('div', { className: 'flex items-center justify-between' },
+                            React.createElement('div', { className: 'text-sm text-gray-500' }, 'Total Users'),
+                            React.createElement('div', { className: 'text-2xl font-bold' }, stats.totalUsers)
+                        )
+                    ),
+                    React.createElement('div', { className: 'bg-white p-4 rounded-lg shadow' },
+                        React.createElement('div', { className: 'flex items-center justify-between' },
+                            React.createElement('div', { className: 'text-sm text-gray-500' }, 'Attendance Rate'),
+                            React.createElement('div', { className: 'text-2xl font-bold' }, 
+                                `${stats.attendanceRate}%`
+                            )
+                        )
+                    ),
+                    React.createElement('div', { className: 'bg-white p-4 rounded-lg shadow' },
+                        React.createElement('div', { className: 'flex items-center justify-between' },
+                            React.createElement('div', { className: 'text-sm text-gray-500' }, 'Active Injuries'),
+                            React.createElement('div', { className: 'text-2xl font-bold' }, stats.activeInjuries)
+                        )
+                    ),
+                    React.createElement('div', { className: 'bg-white p-4 rounded-lg shadow' },
+                        React.createElement('div', { className: 'flex items-center justify-between' },
+                            React.createElement('div', { className: 'text-sm text-gray-500' }, 'Avg Performance'),
+                            React.createElement('div', { className: 'text-2xl font-bold' }, stats.performanceScore)
+                        )
+                    )
+                ),
+
+                // Recent Activities
+                React.createElement('div', { className: 'bg-white rounded-lg shadow p-6' },
+                    React.createElement('h2', { className: 'text-lg font-semibold mb-4' }, 'Recent Activities'),
+                    React.createElement('div', { className: 'space-y-4' },
+                        activities.map((activity, index) =>
+                            React.createElement('div', {
+                                key: index,
+                                className: 'flex items-center space-x-4 p-3 hover:bg-gray-50 rounded-lg'
+                            },
+                                React.createElement('div', { 
+                                    className: `w-2 h-2 ${getActivityColor(activity.type)} rounded-full`
+                                }),
+                                React.createElement('div', { className: 'flex-1' },
+                                    React.createElement('div', { className: 'text-sm' }, activity.content),
+                                    React.createElement('div', { className: 'text-xs text-gray-500' }, 
+                                        activity.timestamp
+                                    )
+                                )
+                            )
+                        )
+                    )
+                )
+            );
+        };
+
+        // Mount the React component
+        const root = ReactDOM.createRoot(document.getElementById('dashboard-root'));
+        root.render(React.createElement(DashboardStats));
+    </script>
+</body>
+</html>

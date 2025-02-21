@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+   <meta charset="UTF-8">
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+   <title>Verify Code - Dance Club</title>
+   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+   <style>
+       body {
+           display: flex;
+           align-items: center;
+           justify-content: center;
+           height: 100vh;
+           background-color: #f4f4f4;
+       }
+       .verify-form {
+           background: white;
+           padding: 30px;
+           border-radius: 8px;
+           box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+           width: 100%;
+           max-width: 400px;
+       }
+       .header-text {
+           text-align: center;
+           margin-bottom: 25px;
+       }
+       .header-text h2 {
+           font-size: 24px;
+           margin-bottom: 10px;
+       }
+       .header-text p {
+           color: #666;
+           font-size: 14px;
+           margin-bottom: 0;
+       }
+       .otp-input {
+           letter-spacing: 4px;
+           font-size: 18px;
+           text-align: center;
+           font-family: monospace;
+           padding: 10px;
+           border: 1px solid #ddd;
+           border-radius: 6px;
+           width: 100%;
+           background-color: #f8f9fa;
+           transition: border-color 0.2s;
+       }
+       .otp-input:focus {
+           outline: none;
+           border-color: #007bff;
+           box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+       }
+       .otp-input::placeholder {
+           color: #adb5bd;
+           font-family: Arial, sans-serif;
+           letter-spacing: normal;
+       }
+       .resend-link {
+           color: #007bff;
+           text-decoration: none;
+           cursor: pointer;
+       }
+       .resend-link.disabled {
+           color: #6c757d;
+           cursor: not-allowed;
+       }
+       .btn-verify {
+           background-color: #007bff;
+           border: none;
+           padding: 12px;
+           font-size: 16px;
+           transition: background-color 0.2s;
+       }
+       .btn-verify:hover {
+           background-color: #0056b3;
+       }
+       .back-link {
+           color: #6c757d;
+           text-decoration: none;
+           font-size: 14px;
+           transition: color 0.2s;
+       }
+       .back-link:hover {
+           color: #343a40;
+       }
+   </style>
+</head>
+<body>
+   <div class="verify-form">
+       <div class="header-text">
+           <h2>Enter Verification Code</h2>
+           <p>A verification code has been sent to your email</p>
+       </div>
+       
+       <form onsubmit="verifyOTP(event)">
+           <div class="mb-4">
+               <input type="text" class="form-control otp-input" id="otp" maxlength="6" required
+                      placeholder="Enter 6-digit code">
+           </div>
+           <div class="text-center mb-4">
+               <span id="countdown">60</span> seconds until you can 
+               <a class="resend-link" id="resendLink" onclick="resendOTP()">resend the code</a>
+           </div>
+           <button type="submit" class="btn btn-primary btn-verify w-100 mb-3">Verify</button>
+           <div class="text-center">
+               <a href="/forgot-password" class="back-link">Back to previous page</a>
+           </div>
+       </form>
+   </div>
+
+   <script>
+       let countdownInterval;
+       const email = sessionStorage.getItem('resetEmail');
+       
+       if (!email) {
+           window.location.href = '/forgot-password';
+       }
+       
+       function startCountdown() {
+           let seconds = 60;
+           const countdownElement = document.getElementById('countdown');
+           const resendLink = document.getElementById('resendLink');
+           
+           resendLink.classList.add('disabled');
+           
+           countdownInterval = setInterval(() => {
+               seconds--;
+               countdownElement.textContent = seconds;
+               
+               if (seconds <= 0) {
+                   clearInterval(countdownInterval);
+                   resendLink.classList.remove('disabled');
+               }
+           }, 1000);
+       }
+       
+       async function resendOTP() {
+           const resendLink = document.getElementById('resendLink');
+           if (resendLink.classList.contains('disabled')) return;
+           
+           try {
+               const response = await fetch('/api/send-otp', {
+                   method: 'POST',
+                   headers: {
+                       'Content-Type': 'application/json',
+                   },
+                   body: JSON.stringify({ email }),
+               });
+               
+               const data = await response.json();
+               
+               if (response.ok) {
+                   startCountdown();
+                   alert('A new verification code has been sent to your email');
+               } else {
+                   alert(data.error || 'Failed to send verification code');
+               }
+           } catch (error) {
+               alert('Failed to send verification code. Please try again later.');
+           }
+       }
+       
+       async function verifyOTP(event) {
+           event.preventDefault();
+           const otp = document.getElementById('otp').value.trim();
+           
+           try {
+               const response = await fetch('/api/verify-otp', {
+                   method: 'POST',
+                   headers: {
+                       'Content-Type': 'application/json',
+                   },
+                   body: JSON.stringify({ email, otp }),
+               });
+               
+               const data = await response.json();
+               
+               if (response.ok) {
+                   sessionStorage.setItem('resetToken', data.token);
+                   window.location.href = '/reset-password';
+               } else {
+                   alert(data.error || 'Invalid verification code');
+               }
+           } catch (error) {
+               alert('Verification failed. Please try again.');
+           }
+       }
+       
+       // Start countdown on page load
+       startCountdown();
+   </script>
+</body>
+</html>

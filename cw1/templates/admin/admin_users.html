@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Management</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #333;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: flex-start;
+            padding-top: 20px;
+            transition: width 0.3s;
+            height: 100%;
+        }
+
+        .sidebar .welcome {
+            font-size: 18px;
+            padding: 15px;
+            width: 100%;
+            text-align: left;
+            background-color: #444;
+            margin-bottom: 20px;
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            color: white;
+            padding: 15px 25px;
+            width: 100%;
+            text-align: left;
+            border-bottom: 1px solid #444;
+            transition: background-color 0.3s;
+            box-sizing: border-box;
+        }
+
+        .sidebar a:hover {
+            background-color: #575757;
+        }
+
+        .sidebar a.active {
+            background-color: #4a4a4a;
+            border-left: 4px solid #007bff;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f4f4f4;
+            overflow-y: auto;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-bar input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .users-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            border-collapse: collapse;
+        }
+
+        .users-table th,
+        .users-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .users-table th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+
+        .btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .modal-body {
+            margin-bottom: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+        }
+
+        .close {
+            cursor: pointer;
+            font-size: 24px;
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875em;
+            margin-top: 0.25rem;
+            display: block;
+            min-height: 1.25em;
+        }
+
+        .form-group input.error {
+            border-color: #dc3545;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #bb2d3b;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 5px;
+        }
+
+            .sidebar .welcome {
+        font-size: 18px;
+        padding: 15px;
+        width: 100%;
+        text-align: left;
+        background-color: #444;
+        margin-bottom: 20px;
+        text-decoration: none;
+        border-bottom: none;
+        transition: background-color 0.3s;
+    }
+
+    .sidebar .welcome:hover {
+        background-color: #555;
+    }
+
+    .sidebar .welcome {
+        font-size: 18px;
+        padding: 15px;
+        width: 100%;
+        text-align: left;
+        background-color: #444;
+        margin-bottom: 20px;
+        text-decoration: none;
+        border-bottom: none;
+        transition: background-color 0.3s;
+    }
+
+    .sidebar .welcome:hover {
+        background-color: #555;
+    }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <a href="/admin/dashboard" class="welcome">{{ user }}</a>
+        <a href="/admin/register">Register New User</a>
+        <a href="/admin/users" class="active">Users Information</a>
+        <a href="/admin/attendance">Attendance Record</a>
+        <a href="/admin/injury">Injury Record</a>
+        <a href="/admin/performance">Performance Record</a>
+        <a href="/admin/training">Training Records</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="search-bar">
+            <input type="text" id="searchInput" placeholder="Search for users by name...">
+        </div>
+
+        <table class="users-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Name</th>
+                    <th>E-mail</th>
+                    <th onclick="toggleRoleFilter()" style="cursor: pointer">
+                        Role 
+                        <span id="roleFilterIcon">👥</span>
+                    </th>
+                    <th onclick="toggleDateSort()" style="cursor: pointer">
+                        Date of Birth 
+                        <span id="dateSortIcon">📅</span>
+                    </th>
+                    <th>guardian</th>
+                    <th>operate</th>
+                </tr>
+            </thead>
+            <tbody id="usersTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Edit User Modal -->
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Edit User Information</h3>
+                <span class="close">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="editUserForm">
+                    <div class="form-group">
+                        <label>User ID</label>
+                        <input type="text" id="editUserId" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label>Name</label>
+                        <input type="text" id="editName" required>
+                    </div>
+                    <div class="form-group">
+                        <label>E-mail</label>
+                        <input type="email" id="editEmail" required>
+                        <div id="emailError" class="error-message"></div>
+                    </div>
+                    <div class="form-group">
+                        <label>Phone number (Optional)</label>
+                        <input type="tel" id="editPhone">
+                    </div>
+                    <div class="form-group">
+                        <label>New Password (Leave blank to remain unchanged)</label>
+                        <input type="password" id="editPassword">
+                    </div>
+                    <div class="form-group">
+                        <label>Role</label>
+                        <select id="editRole" required>
+                            <option value="artist">Artist</option>
+                            <option value="coach">Coach</option>
+                            <option value="director">Director</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="editBirthDate" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Guardian (if applicable)</label>
+                        <input type="text" id="editGuardian">
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="updateUser()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUserId = null;
+        const searchInput = document.getElementById('searchInput');
+        const modal = document.getElementById('editModal');
+        const closeBtn = document.getElementsByClassName('close')[0];
+    
+        let currentRoleFilter = 'all'; 
+        let currentDateSort = 'none';  
+        let userData = [];  
+    
+
+        async function loadUsers(search = '') {
+            try {
+                const response = await fetch(`/api/users?search=${encodeURIComponent(search)}`);
+                const data = await response.json();
+                userData = data.users;
+                displayUsers();
+            } catch (error) {
+                console.error('Error loading users:', error);
+                alert('Failed to load user data');
+            }
+        }
+    
+        function displayUsers() {
+            let filteredUsers = [...userData];
+            
+            if (currentRoleFilter !== 'all') {
+                filteredUsers = filteredUsers.filter(user => user.role === currentRoleFilter);
+            }
+            
+            if (currentDateSort !== 'none') {
+                filteredUsers.sort((a, b) => {
+                    const dateA = new Date(a.birth_date);
+                    const dateB = new Date(b.birth_date);
+                    return currentDateSort === 'asc' ? dateA - dateB : dateB - dateA;
+                });
+            }
+            
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = '';
+            
+            filteredUsers.forEach(user => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${user.user_id}</td>
+                    <td>${user.name}</td>
+                    <td>${user.email}</td>
+                    <td>${user.role}</td>
+                    <td>${user.birth_date}</td>
+                    <td>${user.guardian || '-'}</td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-primary" onclick='showEditModal(${JSON.stringify(user).replace(/'/g, "&#39;")})'>
+                                edit
+                            </button>
+                            <button class="btn btn-danger" onclick="deleteUser('${user.user_id}', '${user.name}')">
+                                delete
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+    
+        function toggleRoleFilter() {
+            const roles = ['all', 'artist', 'coach', 'director'];
+            const currentIndex = roles.indexOf(currentRoleFilter);
+            currentRoleFilter = roles[(currentIndex + 1) % roles.length];
+            
+            const icon = document.getElementById('roleFilterIcon');
+            icon.textContent = currentRoleFilter === 'all' ? '👥' : '🔍';
+            
+            displayUsers();
+        }
+    
+        function toggleDateSort() {
+            const sorts = ['none', 'asc', 'desc'];
+            const currentIndex = sorts.indexOf(currentDateSort);
+            currentDateSort = sorts[(currentIndex + 1) % sorts.length];
+            
+            const icon = document.getElementById('dateSortIcon');
+            icon.textContent = {
+                'none': '📅',
+                'asc': '⬆️',
+                'desc': '⬇️'
+            }[currentDateSort];
+            
+            displayUsers();
+        }
+    
+        async function deleteUser(userId, userName) {
+            if (!confirm(`Are you sure you want to delete user ${userName} ？This operation cannot be undone.`)) {
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/users/${userId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    alert('User deleted successfully');
+                    loadUsers(searchInput.value);
+                } else {
+                    const error = await response.json();
+                    alert(error.message || 'Deletion failed');
+                }
+            } catch (error) {
+                console.error('Error deleting user:', error);
+                alert('Deletion failed');
+            }
+        }
+    
+        function showEditModal(user) {
+            currentUserId = user.user_id;
+            document.getElementById('editUserId').value = user.user_id;
+            document.getElementById('editName').value = user.name;
+            document.getElementById('editEmail').value = user.email;
+            document.getElementById('editPhone').value = user.phone || '';
+            document.getElementById('editRole').value = user.role;
+            document.getElementById('editBirthDate').value = user.birth_date;
+            document.getElementById('editGuardian').value = user.guardian || '';
+            document.getElementById('editPassword').value = '';
+            document.getElementById('emailError').textContent = '';
+            modal.style.display = 'flex';
+        }
+
+        async function updateUser() {
+    document.getElementById('emailError').textContent = '';
+    
+    const data = {
+        name: document.getElementById('editName').value,
+        email: document.getElementById('editEmail').value,
+        phone: document.getElementById('editPhone').value || null,
+        password: document.getElementById('editPassword').value,
+        role: document.getElementById('editRole').value,
+        birth_date: document.getElementById('editBirthDate').value,
+        guardian: document.getElementById('editGuardian').value || null
+    };
+
+    try {
+        const response = await fetch(`/api/users/${currentUserId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data),
+        });
+
+        const result = await response.json();
+        
+        if (response.ok) {
+            alert('User information updated successfully');
+            closeModal();
+            loadUsers(searchInput.value);
+        } else {
+            if (result.error === 'email_exists') {
+                document.getElementById('emailError').textContent = result.message;
+            } else {
+                alert(result.message || 'Update failed');
+            }
+        }
+    } catch (error) {
+        console.error('Error updating user:', error);
+        alert('Failed to update user information');
+    }
+}
+    
+        function closeModal() {
+            modal.style.display = 'none';
+            currentUserId = null;
+        }
+    
+        searchInput.addEventListener('input', debounce(() => {
+            loadUsers(searchInput.value);
+        }, 300));
+    
+
+        function debounce(func, wait) {
+            let timeout;
+            return function executedFunction(...args) {
+                const later = () => {
+                    clearTimeout(timeout);
+                    func(...args);
+                };
+                clearTimeout(timeout);
+                timeout = setTimeout(later, wait);
+            };
+        }
+    
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                closeModal();
+            }
+        }
+    
+
+        document.getElementById('editEmail').addEventListener('input', function() {
+            document.getElementById('emailError').textContent = '';
+        });
+    
+        closeBtn.onclick = closeModal;
+    
+
+        loadUsers();
+    </script>
+</body>
+</html>

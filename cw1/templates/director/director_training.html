@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+
+{% block title %}Training Management{% endblock %}
+
+{% block additional_styles %}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+<style>
+    .filters {
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .filter-row {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 15px;
+    }
+
+    .filter-group {
+        flex: 1;
+    }
+
+    .filter-group label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .training-table {
+        width: 100%;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-collapse: collapse;
+        margin-top: 20px;
+    }
+
+    .training-table th,
+    .training-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #eee;
+    }
+
+    .training-table th {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        color: #333;
+    }
+
+    .training-table tbody tr:hover {
+        background-color: #f5f5f5;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+        font-size: 14px;
+    }
+
+    .select2-container--default .select2-selection--single {
+        height: 38px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        line-height: 36px;
+        padding-left: 12px;
+    }
+
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 36px;
+    }
+</style>
+{% endblock %}
+
+{% block sidebar_items %}
+<a href="{{ url_for('director.personal_information') }}">My Account</a>
+<a href="{{ url_for('director.users_information') }}">Users Information</a>
+<a href="{{ url_for('director.attendance_record') }}">Attendance Record</a>
+<a href="{{ url_for('director.injury_record') }}">Injury Record</a>
+<a href="{{ url_for('director_performance.performance_page') }}">Performance Record</a>
+<a href="{{ url_for('director_training.training_page') }}" class="active">Training Records</a>
+{% endblock %}
+
+{% block content %}
+<div class="filters">
+    <div class="filter-row">
+        <div class="filter-group">
+            <label>Artist</label>
+            <select id="userFilter" style="width: 100%;">
+                <option value="">All Artists</option>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label>Date Range</label>
+            <input type="text" id="dateRange" class="form-control" placeholder="Select date range">
+        </div>
+    </div>
+</div>
+
+<table class="training-table">
+    <thead>
+        <tr>
+            <th>Date</th>
+            <th>Artist</th>
+            <th>Training Type</th>
+            <th>Duration (min)</th>
+            <th>Comments</th>
+        </tr>
+    </thead>
+    <tbody id="trainingTableBody">
+        <!-- Data will be populated by JavaScript -->
+    </tbody>
+</table>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+<script>
+    $(document).ready(function() {
+        initializeSelects();
+        initializeDateRangePicker();
+        loadTrainingRecords();
+    });
+
+    function initializeSelects() {
+        $('#userFilter').select2({
+            placeholder: 'All Artists',
+            allowClear: true,
+            width: '100%'
+        });
+    }
+
+    function initializeDateRangePicker() {
+        $('#dateRange').daterangepicker({
+            startDate: moment().subtract(29, 'days'),
+            endDate: moment(),
+            ranges: {
+                'Today': [moment(), moment()],
+                'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                'Last 14 Days': [moment().subtract(13, 'days'), moment()],
+                'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+                'Last One Year': [moment().subtract(364, 'days'), moment()]
+            }
+        }, function(start, end) {
+            loadTrainingRecords();
+        });
+    }
+
+    async function loadTrainingRecords() {
+        try {
+            const response = await fetch('/api/director/training?' + new URLSearchParams({
+                user_id: $('#userFilter').val() || '',
+                start_date: $('#dateRange').data('daterangepicker').startDate.format('YYYY-MM-DD'),
+                end_date: $('#dateRange').data('daterangepicker').endDate.format('YYYY-MM-DD')
+            }));
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                if (data.users && Array.isArray(data.users)) {
+                    updateUserOptions(data.users);
+                }
+                displayTrainingRecords(data.records || []);
+            } else {
+                throw new Error(data.error || 'Failed to load data');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to load training records: ' + error.message);
+        }
+    }
+
+    function updateUserOptions(users) {
+        const userFilter = $('#userFilter');
+        
+        // Store current selection
+        const currentFilterValue = userFilter.val();
+        
+        // Clear and reinitialize the select
+        userFilter.empty().append(new Option('All Artists', ''));
+        
+        // Add user options
+        users.forEach(user => {
+            userFilter.append(new Option(user.name, user.user_id));
+        });
+        
+        // Restore previous selection if it existed
+        if (currentFilterValue) {
+            userFilter.val(currentFilterValue);
+        }
+        
+        // Trigger change event to update Select2
+        userFilter.trigger('change.select2');
+    }
+
+    function displayTrainingRecords(records) {
+        const tbody = $('#trainingTableBody');
+        tbody.empty();
+
+        if (!records.length) {
+            tbody.append('<tr><td colspan="5" class="text-center">No records found</td></tr>');
+            return;
+        }
+
+        records.forEach(record => {
+            tbody.append(`
+                <tr>
+                    <td>${record.training_date}</td>
+                    <td>${record.user_name}</td>
+                    <td>${record.training_type}</td>
+                    <td>${record.duration}</td>
+                    <td>${record.comments || '-'}</td>
+                </tr>
+            `);
+        });
+    }
+
+    // Event listeners
+    $('#userFilter').on('change', loadTrainingRecords);
+</script>
+{% endblock %}

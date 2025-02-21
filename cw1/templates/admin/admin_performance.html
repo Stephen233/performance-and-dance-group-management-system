@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Performance Management</title>
+    
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            height: 100vh;
+        }
+
+        .sidebar {
+            width: 250px;
+            background-color: #333;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+        }
+
+        .sidebar .welcome {
+            font-size: 18px;
+            padding: 15px;
+            width: 100%;
+            text-align: left;
+            background-color: #444;
+            margin-bottom: 20px;
+            text-decoration: none;
+            border-bottom: none;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar a {
+            text-decoration: none;
+            color: white;
+            padding: 15px 25px;
+            border-bottom: 1px solid #444;
+            transition: background-color 0.3s;
+        }
+
+        .sidebar a:hover {
+            background-color: #575757;
+        }
+
+        .sidebar a.active {
+            background-color: #4a4a4a;
+            border-left: 4px solid #007bff;
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background-color: #f4f4f4;
+            overflow-y: auto;
+        }
+
+        .star-rating {
+            color: #ffd700;
+            font-size: 18px;
+        }
+
+        .star-rating .fas,
+        .star-rating .far {
+            margin-right: 2px;
+        }
+
+        .star-rating .far {
+            color: #ccc;
+        }
+
+        .performance-table {
+            width: 100%;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .performance-table th,
+        .performance-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background-color: #c82333;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            padding: 24px;
+            border-radius: 8px;
+            width: 500px;
+            max-width: 90%;
+            position: relative;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        textarea.form-control {
+            min-height: 100px;
+            resize: vertical;
+        }
+
+        .filters {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .filter-row {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .filter-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .score-filter {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .info-icon {
+            color: #007bff;
+            cursor: help;
+            position: relative;
+            margin-left: 5px;
+        }
+
+        .tooltip-content {
+            visibility: hidden;
+            width: 200px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 10px;
+            position: absolute;
+            z-index: 1;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -100px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .info-icon:hover .tooltip-content {
+            visibility: visible;
+            opacity: 1;
+        }
+
+        .select2-container .select2-selection--single {
+            height: 38px;
+            padding: 5px;
+        }
+
+        .select2-container--default .select2-selection--single .select2-selection__arrow {
+            height: 36px;
+        }
+
+        .rating-selector-large {
+            font-size: 24px;
+            cursor: pointer;
+            color: #ffd700;
+            margin: 10px 0;
+        }
+
+        .rating-selector-large i {
+            margin-right: 5px;
+            transition: color 0.2s;
+        }
+
+        .modal-header {
+            margin: -24px -24px 20px -24px;
+            padding: 15px 24px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+        }
+
+        .modal-footer {
+            margin: 20px -24px -24px -24px;
+            padding: 15px 24px;
+            background: #f8f9fa;
+            border-top: 1px solid #eee;
+            text-align: right;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <a href="/admin/dashboard" class="welcome">{{ user }}</a>
+        <a href="/admin/register">Register New User</a>
+        <a href="/admin/users">Users Information</a>
+        <a href="/admin/attendance">Attendance Record</a>
+        <a href="/admin/injury">Injury Record</a>
+        <a href="/admin/performance" class="active">Performance Record</a>
+        <a href="/admin/training">Training Records</a>
+        <a href="/logout">Logout</a>
+    </div>
+
+    <div class="main-content">
+        <div class="filters">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label>User</label>
+                    <select id="userFilter" style="width: 100%;">
+                        <option value="">All Users</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label>Date Range</label>
+                    <input type="text" id="dateRange" class="form-control">
+                </div>
+                <div class="filter-group">
+                    <label>Score Range</label>
+                    <div class="score-filter">
+                        <select id="minScore" class="form-control">
+                            <option value="">Min Score</option>
+                            <option value="1">1 Star</option>
+                            <option value="2">2 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="5">5 Stars</option>
+                        </select>
+                        <span>to</span>
+                        <select id="maxScore" class="form-control">
+                            <option value="">Max Score</option>
+                            <option value="1">1 Star</option>
+                            <option value="2">2 Stars</option>
+                            <option value="3">3 Stars</option>
+                            <option value="4">4 Stars</option>
+                            <option value="5">5 Stars</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" onclick="showAddModal()">Add New Record</button>
+
+        <table class="performance-table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>User</th>
+                    <th>Role</th>
+                    <th>Performance Name</th>
+                    <th>Location</th>
+                    <th>Score</th>
+                    <th>Feedback</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="performanceTableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <div id="performanceModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Add New Performance Record</h3>
+                <button class="close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="performanceForm">
+                    <div class="form-group" id="userSelectGroup">
+                        <label>User</label>
+                        <select id="modalUser" class="form-control" required>
+                            <option value="">Select User</option>
+                        </select>
+                    </div>
+                    <div class="form-group" id="userDisplayGroup" style="display: none;">
+                        <label>User</label>
+                        <input type="text" id="modalUserDisplay" class="form-control" readonly>
+                    </div>
+                    <div class="form-group">
+                        <label>Date</label>
+                        <input type="date" id="modalDate" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Performance Name</label>
+                        <input type="text" id="modalPerformanceName" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Location</label>
+                        <input type="text" id="modalLocation" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Score</label>
+                        <div class="rating-selector-large" id="modalRatingSelector">
+                            <i class="far fa-star" data-rating="1"></i>
+                            <i class="far fa-star" data-rating="2"></i>
+                            <i class="far fa-star" data-rating="3"></i>
+                            <i class="far fa-star" data-rating="4"></i>
+                            <i class="far fa-star" data-rating="5"></i>
+                        </div>
+                        <input type="hidden" id="modalScore" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Feedback</label>
+                        <textarea id="modalFeedback" class="form-control"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="savePerformance()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/momentjs/latest/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.min.js"></script>
+
+    <script>
+        let currentPerformanceId = null;
+
+        $(document).ready(function() {
+            initializeSelects();
+            initializeDateRangePicker();
+            loadPerformances();
+            setupEventListeners();
+        });
+
+        function initializeSelects() {
+            $('#userFilter').select2({
+                placeholder: 'All Users',
+                allowClear: true,
+                width: '100%'
+            });
+
+            $('#modalUser').select2({
+                dropdownParent: $('#performanceModal'),
+                placeholder: 'Select User',
+                width: '100%'
+            });
+        }
+
+        function setupEventListeners() {
+            $('#userFilter').on('select2:select', function(e) {
+                console.log('User selected:', e.params.data);
+                loadPerformances();
+            });
+
+            $('#userFilter').on('select2:unselect', function(e) {
+                console.log('User unselected');
+                loadPerformances();
+            });
+
+            $('#userFilter').on('select2:clear', function(e) {
+                console.log('User filter cleared');
+                loadPerformances();
+            });
+
+            $('#dateRange').on('apply.daterangepicker', function(e, picker) {
+                console.log('Date range changed:', picker.startDate.format('YYYY-MM-DD'), 'to', picker.endDate.format('YYYY-MM-DD'));
+                loadPerformances();
+            });
+
+            $('#minScore, #maxScore').on('change', function() {
+                console.log('Score range changed');
+                loadPerformances();
+            });
+
+            $('#modalRatingSelector').on('click', 'i', function() {
+                const rating = parseInt($(this).data('rating'));
+                updateStarDisplay(rating);
+            });
+
+            $('.modal .close').on('click', closeModal);
+            $(window).on('click', function(event) {
+                if ($(event.target).is('.modal')) {
+                    closeModal();
+                }
+            });
+        }
+
+        function initializeDateRangePicker() {
+            $('#dateRange').daterangepicker({
+                startDate: moment().subtract(29, 'days'),
+                endDate: moment(),
+                ranges: {
+                    'Today': [moment(), moment()],
+                    'Yesterday': [moment().subtract(1, 'days'), moment().subtract(1, 'days')],
+                    'Last 7 Days': [moment().subtract(6, 'days'), moment()],
+                    'Last 14 Days': [moment().subtract(13, 'days'), moment()],
+                    'Last 30 Days': [moment().subtract(29, 'days'), moment()],
+                    'Last Month': [moment().subtract(1, 'month').startOf('month'), moment().subtract(1, 'month').endOf('month')],
+                    'Last One Year': [moment().subtract(364, 'days'), moment()]
+                }
+            });
+        }
+
+        async function loadPerformances() {
+            console.log('Loading performances...');
+            try {
+                // 获取当前的筛选值
+                const userId = $('#userFilter').val();
+                const dateRange = $('#dateRange').data('daterangepicker');
+                const minScore = $('#minScore').val();
+                const maxScore = $('#maxScore').val();
+
+                console.log('Current filters:', {
+                    userId,
+                    dateRange: dateRange ? {
+                        start: dateRange.startDate.format('YYYY-MM-DD'),
+                        end: dateRange.endDate.format('YYYY-MM-DD')
+                    } : null,
+                    minScore,
+                    maxScore
+                });
+
+                const params = new URLSearchParams({
+                    user_id: userId || '',
+                    start_date: dateRange ? dateRange.startDate.format('YYYY-MM-DD') : '',
+                    end_date: dateRange ? dateRange.endDate.format('YYYY-MM-DD') : '',
+                    min_score: minScore || '',
+                    max_score: maxScore || ''
+                });
+
+                const response = await fetch('/api/performance?' + params);
+                const data = await response.json();
+                
+                if (response.ok) {
+                    console.log('Received data:', data);
+                    updateUserOptions(data.users);
+                    displayPerformanceRecords(data.records);
+                } else {
+                    throw new Error(data.error || 'Failed to load performance records');
+                }
+            } catch (error) {
+                console.error('Error loading performances:', error);
+                alert('Failed to load performance records: ' + error.message);
+            }
+        }
+
+        function updateUserOptions(users) {
+            const userFilter = $('#userFilter');
+            const modalUser = $('#modalUser');
+            
+            // 保存当前选中的值
+            const currentFilterValue = userFilter.val();
+            const currentModalValue = modalUser.val();
+            
+            // 清除现有选项（保留第一个）
+            userFilter.find('option:not(:first)').remove();
+            modalUser.find('option:not(:first)').remove();
+            
+            // 添加新选项
+            users.forEach(user => {
+                const option = new Option(user.name, user.user_id, false, false);
+                userFilter.append(option);
+                modalUser.append(option.cloneNode(true));
+            });
+            
+            // 恢复之前选中的值
+            if (currentFilterValue) {
+                userFilter.val(currentFilterValue).trigger('change.select2');
+            }
+            if (currentModalValue) {
+                modalUser.val(currentModalValue).trigger('change.select2');
+            }
+        }
+
+        function displayPerformanceRecords(records) {
+            const tbody = $('#performanceTableBody');
+            tbody.empty();
+
+            if (!records.length) {
+                tbody.append('<tr><td colspan="8" class="text-center">No records found</td></tr>');
+                return;
+            }
+
+            records.forEach(record => {
+                const feedbackDisplay = record.feedback ? 
+                    `<span class="info-icon">
+                        <i class="fas fa-info-circle"></i>
+                        <span class="tooltip-content">${record.feedback}</span>
+                    </span>` : 
+                    '-';
+                    
+                tbody.append(`
+                    <tr>
+                        <td>${record.performance_date}</td>
+                        <td>${record.user_name}</td>
+                        <td>${record.role}</td>
+                        <td>${record.performance_name}</td>
+                        <td>${record.location}</td>
+                        <td>${getStarRating(record.score)}</td>
+                        <td>${feedbackDisplay}</td>
+                        <td>
+                            <button class="btn btn-primary" onclick='showEditModal(${JSON.stringify(record).replace(/'/g, "&#39;")})'>Edit</button>
+                            <button class="btn btn-danger" onclick="deletePerformance(${record.performance_id})">Delete</button>
+                        </td>
+                    </tr>
+                `);
+            });
+        }
+
+        function getStarRating(score) {
+            let stars = '';
+            for (let i = 1; i <= 5; i++) {
+                stars += `<i class="${i <= score ? 'fas' : 'far'} fa-star"></i>`;
+            }
+            return `<div class="star-rating">${stars}</div>`;
+        }
+
+        function showEditModal(record) {
+            currentPerformanceId = record.performance_id;
+            $('#modalTitle').text('Edit Performance Record');
+            
+            $('#modalPerformanceName').val(record.performance_name);
+            $('#modalDate').val(record.performance_date);
+            $('#modalLocation').val(record.location);
+            $('#modalScore').val(record.score);
+            $('#modalFeedback').val(record.feedback || '');
+            updateStarDisplay(record.score);
+            
+            $('#userSelectGroup').hide();
+            $('#userDisplayGroup').show();
+            $('#modalUserDisplay').val(record.user_name);
+            
+            $('#performanceModal').css('display', 'flex');
+        }
+
+        function showAddModal() {
+            currentPerformanceId = null;
+            $('#modalTitle').text('Add New Performance Record');
+            $('#performanceForm').trigger('reset');
+            
+            $('#userSelectGroup').show();
+            $('#userDisplayGroup').hide();
+            $('#modalUser').val(null).trigger('change');
+            
+            $('#modalDate').val(new Date().toISOString().split('T')[0]).prop('readonly', false);
+            updateStarDisplay(0);
+            
+            $('#performanceModal').css('display', 'flex');
+        }
+
+        function updateStarDisplay(rating) {
+            const stars = $('#modalRatingSelector i');
+            stars.each(function(index) {
+                $(this).attr('class', index < rating ? 'fas fa-star' : 'far fa-star');
+            });
+            $('#modalScore').val(rating);
+        }
+
+        async function savePerformance() {
+            const data = {
+                performance_name: $('#modalPerformanceName').val(),
+                location: $('#modalLocation').val(),
+                score: parseInt($('#modalScore').val()),
+                feedback: $('#modalFeedback').val()
+            };
+
+            if (!currentPerformanceId) {
+                data.user_id = $('#modalUser').val();
+                data.performance_date = $('#modalDate').val();
+                if (!data.user_id) {
+                    alert('Please select a user');
+                    return;
+                }
+            }
+
+            if (!data.score || data.score < 1 || data.score > 5) {
+                alert('Please select a valid score (1-5 stars)');
+                return;
+            }
+
+            try {
+                const url = currentPerformanceId ? 
+                    `/api/performance/${currentPerformanceId}` : 
+                    '/api/performance';
+                
+                const response = await fetch(url, {
+                    method: currentPerformanceId ? 'PUT' : 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message);
+                    closeModal();
+                    loadPerformances();
+                } else {
+                    throw new Error(result.error || 'Failed to save performance record');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(error.message);
+            }
+        }
+
+        async function deletePerformance(performanceId) {
+            if (!confirm('Are you sure you want to delete this performance record?')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`/api/performance/${performanceId}`, {
+                    method: 'DELETE'
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    alert(result.message);
+                    loadPerformances();
+                } else {
+                    throw new Error(result.error || 'Failed to delete performance record');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                alert(error.message);
+            }
+        }
+
+        function closeModal() {
+            $('#performanceModal').css('display', 'none');
+            $('#performanceForm').trigger('reset');
+            $('#modalUser').val(null).trigger('change');
+            updateStarDisplay(0);
+        }
+    </script>
+</body>
+</html>
